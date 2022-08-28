@@ -61,18 +61,18 @@ def get_employee_data():
         data_file.seek(0)
         if data_file.read() == "":
             # create two mock employees
-            emp1 = Employee(12345, 'John', 'Doe').__dict__
-            emp2 = Employee(23456, 'Jane', 'Doe').__dict__
-            emp3 = Employee(99999, 'Admin', 'Person').__dict__
+            emp1 = Employee('12345', 'John', 'Doe').__dict__
+            emp2 = Employee('23456', 'Jane', 'Doe').__dict__
+            emp3 = Employee('99999', 'Admin', 'Person').__dict__
             emp3['is_admin'] = True
             # create some date/time objects for shifts
             datetime1 = datetime.datetime(2022, 8, 10, 8, 0, 0)
             datetime2 = datetime.datetime(2022, 8, 11, 8, 0, 0)
             datetime3 = datetime.datetime(2022, 8, 12, 8, 0, 0)
             # create some mock shifts
-            shift1 = Shift(12345, datetime1.strftime("%x"), datetime1.strftime("%X")).__dict__
-            shift2 = Shift(12345, datetime2.strftime("%x"), datetime1.strftime("%X")).__dict__
-            shift3 = Shift(23456, datetime3.strftime("%x"), datetime1.strftime("%X")).__dict__
+            shift1 = Shift('12345', datetime1.strftime("%x"), datetime1.strftime("%X")).__dict__
+            shift2 = Shift('12345', datetime2.strftime("%x"), datetime1.strftime("%X")).__dict__
+            shift3 = Shift('23456', datetime3.strftime("%x"), datetime1.strftime("%X")).__dict__
             # format data
             mock_data = {'employees': [emp1, emp2, emp3],
                          'shifts': [shift1, shift2, shift3]}
@@ -111,23 +111,24 @@ def show_start_menu():
     option = input()
 
     if option == '1':    
-        try:
-            id_input = input('\nPlease enter Employee ID: ')
-            emp_id = int(id_input)
-            if validate_emp_id(emp_id) == False:
-                show_start_menu()
-            else:
-                global current_employee
-                current_employee = [employee for employee in employees if emp_id == employee['id']][0]
-                print('\nWelcome back,', current_employee['first_name'])
-                show_main_menu()
-        except:
-            print('\n*** INVALID ENTRY ***\n')
-            show_start_menu() 
+        emp_id = input('\nPlease enter Employee ID: ')
+        if validate_emp_id(emp_id) == False:
+            show_start_menu()
+        else:
+            global current_employee
+            current_employee = [employee for employee in employees if emp_id == employee['id']][0]
+            print('\nWelcome back,', current_employee['first_name'])
+            show_main_menu()
+
     elif option == '2':
         current_employee = register()
-        print('\nWelcome to the team,', current_employee['first_name'], current_employee['last_name'] + '!\n')
-        show_main_menu()
+        if current_employee == None:
+            print('\nERROR: Some of your input was blank. Try again.\n')
+            show_start_menu()
+        else:
+            print('\nWelcome to the team,', current_employee['first_name'], current_employee['last_name'] + '!\n')
+            show_main_menu()
+
     elif option == '0':
         print('\nExiting the Time Clock program. Goodbye!\n')
     else:
@@ -220,49 +221,57 @@ def end_shift(emp, date, time):
         print('\n This shift was already ended on', shift_to_end['date'], 'at', shift_to_end['shift_end'], '.\n')
     
 def start_break(emp, date, time):
-    shift = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date][0]
-    new_break = Break(time).__dict__
-    shift['breaks'].append(new_break)
-    emp['on_break'] = True
-    update_data_file()
-    print ('\nBREAK STARTED:', emp['first_name'], emp['last_name'], '--', shift['date'], new_break['break_start'],'\n')
+    emp_shifts = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date]
+    if len(emp_shifts) > 0:
+        shift = emp_shifts[0]
+        new_break = Break(time).__dict__
+        shift['breaks'].append(new_break)
+        emp['on_break'] = True
+        update_data_file()
+        print ('\nBREAK STARTED:', emp['first_name'], emp['last_name'], '--', shift['date'], new_break['break_start'],'\n')
 
 def end_break(emp, date, time):
-    shift = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date][0]
-    for brk in shift['breaks']:
-        if brk['break_start'] != None and brk['break_end'] == None:
-            brk['break_end'] = time
-            emp['on_break'] = False
-            update_data_file()
-            print ('\nBREAK ENDED:', emp['first_name'], emp['last_name'], '--', shift['date'], brk['break_end'],'\n')
-        else:
-            print('\nThere is no active break for this shift.')
+    emp_shifts = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date]
+    if len(emp_shifts) > 0:
+        shift = emp_shifts[0]
+        for brk in shift['breaks']:
+            if brk['break_start'] != None and brk['break_end'] == None:
+                brk['break_end'] = time
+                emp['on_break'] = False
+                update_data_file()
+                print ('\nBREAK ENDED:', emp['first_name'], emp['last_name'], '--', shift['date'], brk['break_end'],'\n')
+            else:
+                print('\nThere is no active break for this shift.')
 
 def start_lunch(emp, date, time):
-    shift = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date][0]
-    new_lunch = Lunch(time).__dict__
-    shift['lunches'].append(new_lunch)
-    emp['at_lunch'] = True
-    update_data_file()
-    print ('\nLUNCH STARTED:', emp['first_name'], emp['last_name'], '--', shift['date'], new_lunch['lunch_start'],'\n')
+    emp_shifts = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date]
+    if len(emp_shifts) > 0:
+        shift = emp_shifts[0]
+        new_lunch = Lunch(time).__dict__
+        shift['lunches'].append(new_lunch)
+        emp['at_lunch'] = True
+        update_data_file()
+        print ('\nLUNCH STARTED:', emp['first_name'], emp['last_name'], '--', shift['date'], new_lunch['lunch_start'],'\n')
 
 def end_lunch(emp, date, time):
-    shift = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date][0]
-    for lunch in shift['lunches']:
-        if lunch['lunch_start'] != None and lunch['lunch_end'] == None:
-            lunch['lunch_end'] = time
-            emp['at_lunch'] = False
-            update_data_file()
-            print ('\nLUNCH ENDED:', emp['first_name'], emp['last_name'], '--', shift['date'], lunch['lunch_end'],'\n')
-        else:
-            print('\nThere is no active lunch for this shift.')
+    emp_shifts = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date]
+    if len(emp_shifts) > 0:
+        shift = emp_shifts[0]
+        for lunch in shift['lunches']:
+            if lunch['lunch_start'] != None and lunch['lunch_end'] == None:
+                lunch['lunch_end'] = time
+                emp['at_lunch'] = False
+                update_data_file()
+                print ('\nLUNCH ENDED:', emp['first_name'], emp['last_name'], '--', shift['date'], lunch['lunch_end'],'\n')
+            else:
+                print('\nThere is no active lunch for this shift.')
 
 def process_main_menu_input(user_input):
     time = datetime.datetime.now()
     # Main menu Option 1 - Start Shift (current employee)
     if user_input == '1':
         if current_employee['shift_active'] == True:
-            print('\n*** SHIFT ALREADY ACTIVE ***\n')
+            print('\n*** INVALID ENTRY ***\n')
             show_main_menu()
         else:
             start_shift(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -272,7 +281,7 @@ def process_main_menu_input(user_input):
     # Main menu Option 2 - End Break (current employee)
     elif user_input == '2':
         if current_employee['on_break'] == False or current_employee['shift_active'] == False:
-            print('\n*** NO ACTIVE SHIFT/BREAK ***\n')
+            print('\n*** INVALID ENTRY ***\n')
             show_main_menu()
         else:
             end_break(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -282,7 +291,7 @@ def process_main_menu_input(user_input):
     # Main menu Option 3 - End Lunch (current employee)
     elif user_input == '3':
         if current_employee['at_lunch'] == False or current_employee['shift_active'] == False:
-            print('\n*** NO ACTIVE SHIFT/LUNCH ***\n')
+            print('\n*** INVALID ENTRY ***\n')
             show_main_menu()
         else:
             end_lunch(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -292,7 +301,7 @@ def process_main_menu_input(user_input):
     # Main menu Option 4 - Start Break (current employee)
     elif user_input == '4':
         if current_employee['on_break'] == True or current_employee['shift_active'] == False:
-            print('\n*** ALREADY ON BREAK/NO ACTIVE SHIFT ***\n')
+            print('\n*** INVALID ENTRY ***\n')
             show_main_menu()
         else:
             start_break(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -302,7 +311,7 @@ def process_main_menu_input(user_input):
     # Main menu Option 5 - Start Lunch (current employee)
     elif user_input == '5':
         if current_employee['at_lunch'] == True or current_employee['shift_active'] == False:
-            print('\n*** ALREADY AT LUNCH/NO ACTIVE SHIFT ***\n')
+            print('\n*** INVALID ENTRY ***\n')
             show_main_menu()
         else:
             start_lunch(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -313,7 +322,7 @@ def process_main_menu_input(user_input):
     elif user_input == '6':
         if current_employee['shift_active'] == False or\
             current_employee['on_break'] == True or current_employee['at_lunch'] == True:
-            print('\n*** ON BREAK/AT LUNCH/NO ACTIVE SHIFT ***\n')
+            print('\n*** INVALID ENTRY ***\n')
             show_main_menu()
         else:
             end_shift(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -337,7 +346,7 @@ def process_main_menu_input(user_input):
 def process_admin_task(option):
     # Admin menu Option 1 - adjust time clock punch
     if option == '1':
-        selected_emp_id = int(input("\nPlease enter an Employee ID: "))
+        selected_emp_id = input("\nPlease enter an Employee ID: ")
         if validate_emp_id(selected_emp_id) == True:
             selected_employee = [employee for employee in employees if selected_emp_id == employee['id']][0]
             admin_adjust_time(selected_employee)
@@ -347,7 +356,7 @@ def process_admin_task(option):
 
     # Admin menu Option 2 - display shift report
     elif option == '2':
-        selected_emp_id = int(input("\nPlease enter an employee's ID to see their shift report: "))
+        selected_emp_id = input("\nPlease enter an employee's ID to see their shift report: ")
         if validate_emp_id(selected_emp_id) == True:
             display_shift_report(selected_emp_id)
         else:
@@ -356,11 +365,11 @@ def process_admin_task(option):
 
     # Admin menu Option 3 - change employee profile
     elif option == '3':
-        selected_emp_id = int(input("\nPlease enter an employee's ID to update their profile: "))
+        selected_emp_id = input("\nPlease enter an employee's ID to update their profile: ")
         if validate_emp_id(selected_emp_id) == True:
             update_profile(selected_emp_id)
         else:
-            print("No user with that id.")
+            print("No user with that id.\n")
             show_admin_menu()
 
     # Admin menu Option 4 - Go back to main menu
@@ -384,21 +393,41 @@ def admin_adjust_time(emp):
     print('PRESS 9 to go back to Admin menu\n')
 
     option = input()
-    date_input = input('\nEnter date (MM/DD/YY): ')
-    time_input = input('\nEnter time (HH:MM:SS): ')
 
+    def get_date_time():
+        date = input('\nEnter date (MM/DD/YY): ')
+        time = input('\nEnter time (HH:MM:SS): ')
+        if date != "" and time != "":
+            return {date, time}
+        else:
+            print('\nDate and/or time input was blank. Operation cancelled.\n')
+            return {'date': "", 'time': ""}
+
+    # Start shift
     if option == '1':
-        start_shift(emp, date_input, time_input)
+        date, time = get_date_time()
+        if date != "" and time != "":
+            start_shift(emp, date, time)
     elif option == '2':
-        end_shift(emp, date_input, time_input)
+        date, time = get_date_time()
+        if date != "" and time != "":
+            end_shift(emp, date, time)
     elif option == '3':
-        start_break(emp, date_input, time_input)
+        date, time = get_date_time()
+        if date != "" and time != "":
+            start_break(emp, date, time)
     elif option == '4':
-        end_break(emp, date_input, time_input)
+        date, time = get_date_time()
+        if date != "" and time != "":
+            end_break(emp, date, time)
     elif option == '5':
-        start_lunch(emp, date_input, time_input)
+        date, time = get_date_time()
+        if date != "" and time != "":
+            start_lunch(emp, date, time)
     elif option == '6':
-        end_lunch(emp, date_input, time_input)
+        date, time = get_date_time()
+        if date != "" and time != "":
+            end_lunch(emp, date, time)
     else:
         print('\n*** INVALID ENTRY ***\n')
 
@@ -407,19 +436,14 @@ def admin_adjust_time(emp):
 def register():
     """ Enter id, first name, and last name to register as new user """
 
-    id_input = input('Please enter Employee ID number: ')
-    try:
-        id_num = int(id_input)
-        first = input('First name: ')
-        last = input('Last name: ')
-
+    id_num = input('Please enter Employee ID number: ')
+    first = input('First name: ')
+    last = input('Last name: ')
+    if id_num != "" and first != "" and last != "":
         new_user = Employee(id_num, first, last).__dict__
         employees.append(new_user)
         update_data_file()
         return new_user
-    except:
-        print('\n*** EMPLOYEE ID MUST BE A NUMBER ***\n')
-        register()
 
 def update_profile(emp_id):
     employee = [emp for emp in employees if emp['id'] == emp_id][0]
@@ -445,7 +469,7 @@ def update_profile(emp_id):
         print('\nADMIN STATUS UPDATED\n')
 
     update_data_file()
-    print('Employee: ', employee['first_name'], employee['last_name'], '\nAdmin status:', employee['is_admin'],'\n')
+    print('\nEmployee: ', employee['first_name'], employee['last_name'], '\nAdmin status:', employee['is_admin'],'\n')
     show_admin_menu()
 
 def display_shift_report(emp_id):
