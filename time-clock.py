@@ -3,8 +3,8 @@
 #                                                                                   #
 #  In the absence of a database, we store data in a json data file.                 #
 #  Each employee 'record' is an instance of the Employee class.                     #
-#  Each shift 'record' is an instance of the Shift class, and this program          #
-#  assumes one shift per day.                                                       #
+#  Each shift 'record' is an instance of the Shift class. This program assumes      #
+#  one shift per day.                                                               #
 #                                                                                   #
 #  Since an employee can technically have multiple breaks and lunches during one    #
 #  shift, we have classes for those elements, and the instances are kept in         #
@@ -65,7 +65,7 @@ def get_employee_data():
             emp2 = Employee(23456, 'Jane', 'Doe').__dict__
             emp3 = Employee(99999, 'Admin', 'Person').__dict__
             emp3['is_admin'] = True
-            # create some date/time objects
+            # create some date/time objects for shifts
             datetime1 = datetime.datetime(2022, 8, 10, 8, 0, 0)
             datetime2 = datetime.datetime(2022, 8, 11, 8, 0, 0)
             datetime3 = datetime.datetime(2022, 8, 12, 8, 0, 0)
@@ -96,16 +96,8 @@ def get_employee_data():
 
 def update_data_file():
     """ When a change is made to employee or shift status, write a new data file"""
-    # Prepare data to write to file
-    emp_data = []
-    for employee in employees:
-        emp_data.append(employee)
 
-    shift_data = []
-    for shift in shifts:
-        shift_data.append(shift)
-
-    data_to_export = {'employees': emp_data, 'shifts': shift_data}
+    data_to_export = {'employees': employees, 'shifts': shifts}
 
     # Write updated data to data file
     with open("time_clock_data.json", "w") as data_file:
@@ -115,27 +107,31 @@ def show_start_menu():
     """ Prompts user to sign in, register as new user, or quit the program. """
     
     print('Please choose from the following options:\n')
-    print('PRESS 1 to sign in\nPRESS 2 to register as a new user\
-        \nPRESS 0 to quit the Time Clock program\n')
+    print('PRESS 1 to sign in\nPRESS 2 to register as a new user\nPRESS 0 to quit the Time Clock program\n')
     option = input()
-    if option == '1':
-        emp_id = int(input('\nPlease enter Employee ID: '))
-        if validate_emp_id(emp_id) == False:
-            show_start_menu()
-        else:
-            global current_employee
-            current_employee = [employee for employee in employees if emp_id == employee['id']][0]
-            print('\nWelcome back,', current_employee['first_name'])
-            show_main_menu()
+
+    if option == '1':    
+        try:
+            id_input = input('\nPlease enter Employee ID: ')
+            emp_id = int(id_input)
+            if validate_emp_id(emp_id) == False:
+                show_start_menu()
+            else:
+                global current_employee
+                current_employee = [employee for employee in employees if emp_id == employee['id']][0]
+                print('\nWelcome back,', current_employee['first_name'])
+                show_main_menu()
+        except:
+            print('\n*** INVALID ENTRY ***\n')
+            show_start_menu() 
     elif option == '2':
         current_employee = register()
         print('\nWelcome to the team,', current_employee['first_name'], current_employee['last_name'] + '!\n')
         show_main_menu()
     elif option == '0':
         print('\nExiting the Time Clock program. Goodbye!\n')
-        quit()
     else:
-        print('You did not select a valid option.')
+        print('\n*** INVALID ENTRY ***\n')
         show_start_menu()
 
 def validate_emp_id(emp_id):
@@ -157,9 +153,9 @@ def validate_emp_id(emp_id):
         return False
 
 def show_main_menu():
-    """Display options for various clock punches based on current shift, break, and lunch status"""
-    print('Please select an option:')
-
+    """ Display options for various clock punches based on current shift, break, and lunch status. """
+    
+    print('Please select an option:\n')
     if current_employee['shift_active'] == False:
         # If there is already a shift for this day, prompt them to sign out
         this_day_shifts = [shift for shift in shifts if shift['emp_id'] == current_employee['id'] and
@@ -185,7 +181,8 @@ def show_main_menu():
     process_main_menu_input(option)
 
 def show_admin_menu():
-    """Display options to allow administrators to perform any function."""
+    """ Display options to allow administrators to perform any function. """
+
     if current_employee['is_admin'] == False:
         print('Unauthorized to access this menu.')
         show_main_menu()
@@ -193,7 +190,8 @@ def show_admin_menu():
         print('Please select an option:')
         print('\nPRESS 1 adjust an employee time record')
         print('PRESS 2 to display a shift report')
-        print('PRESS 3 to go back to the main menu\n')
+        print('PRESS 3 to update employee profile')
+        print('PRESS 4 to go back to the main menu\n')
 
     option = input()
     process_admin_task(option)
@@ -261,11 +259,10 @@ def end_lunch(emp, date, time):
 
 def process_main_menu_input(user_input):
     time = datetime.datetime.now()
-
     # Main menu Option 1 - Start Shift (current employee)
-    if int(user_input) == 1:
+    if user_input == '1':
         if current_employee['shift_active'] == True:
-            print('Invalid entry.\n')
+            print('\n*** SHIFT ALREADY ACTIVE ***\n')
             show_main_menu()
         else:
             start_shift(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -273,9 +270,9 @@ def process_main_menu_input(user_input):
             show_main_menu()
 
     # Main menu Option 2 - End Break (current employee)
-    elif int(user_input) == 2:
+    elif user_input == '2':
         if current_employee['on_break'] == False or current_employee['shift_active'] == False:
-            print('Invalid entry.\n')
+            print('\n*** NO ACTIVE SHIFT/BREAK ***\n')
             show_main_menu()
         else:
             end_break(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -283,9 +280,9 @@ def process_main_menu_input(user_input):
             show_main_menu()
 
     # Main menu Option 3 - End Lunch (current employee)
-    elif int(user_input) == 3:
+    elif user_input == '3':
         if current_employee['at_lunch'] == False or current_employee['shift_active'] == False:
-            print('Invalid entry.\n')
+            print('\n*** NO ACTIVE SHIFT/LUNCH ***\n')
             show_main_menu()
         else:
             end_lunch(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -293,18 +290,19 @@ def process_main_menu_input(user_input):
             show_main_menu()
 
     # Main menu Option 4 - Start Break (current employee)
-    elif int(user_input) == 4:
+    elif user_input == '4':
         if current_employee['on_break'] == True or current_employee['shift_active'] == False:
-            print('Invalid entry.\n')
+            print('\n*** ALREADY ON BREAK/NO ACTIVE SHIFT ***\n')
             show_main_menu()
         else:
             start_break(current_employee, time.strftime("%x"), time.strftime("%X"))
             current_employee['on_break'] = True
             show_main_menu()
+
     # Main menu Option 5 - Start Lunch (current employee)
-    elif int(user_input) == 5:
+    elif user_input == '5':
         if current_employee['at_lunch'] == True or current_employee['shift_active'] == False:
-            print('Invalid entry.\n')
+            print('\n*** ALREADY AT LUNCH/NO ACTIVE SHIFT ***\n')
             show_main_menu()
         else:
             start_lunch(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -312,10 +310,10 @@ def process_main_menu_input(user_input):
             show_main_menu()
 
     # Main menu Option 6 - End Shift (current employee)
-    elif int(user_input) == 6:
+    elif user_input == '6':
         if current_employee['shift_active'] == False or\
             current_employee['on_break'] == True or current_employee['at_lunch'] == True:
-            print('Invalid entry.\n')
+            print('\n*** ON BREAK/AT LUNCH/NO ACTIVE SHIFT ***\n')
             show_main_menu()
         else:
             end_shift(current_employee, time.strftime("%x"), time.strftime("%X"))
@@ -323,44 +321,54 @@ def process_main_menu_input(user_input):
             show_main_menu()
 
     # Main menu Option 8 - display administrator menu
-    elif int(user_input) == 8:
+    elif user_input == '8':
         show_admin_menu()
 
     # Main menu Option 9 - sign out
-    elif int(user_input) == 9:
+    elif user_input == '9':
         print('\nSigning out. Goodbye,', current_employee['first_name'] + '!\n')
         show_start_menu()
 
     # Invalid input
     else:
-        print('\nInvalid input. Try again.\n')
-        show_start_menu()
+        print('\n*** INVALID ENTRY ***\n')
+        show_main_menu()
 
 def process_admin_task(option):
     # Admin menu Option 1 - adjust time clock punch
-    if int(option) == 1:
+    if option == '1':
         selected_emp_id = int(input("\nPlease enter an Employee ID: "))
         if validate_emp_id(selected_emp_id) == True:
             selected_employee = [employee for employee in employees if selected_emp_id == employee['id']][0]
             admin_adjust_time(selected_employee)
         else:
-            print("No user with that id.")
+            print("No user with that id.\n")
             show_admin_menu()
 
     # Admin menu Option 2 - display shift report
-    elif int(option) == 2:
+    elif option == '2':
         selected_emp_id = int(input("\nPlease enter an employee's ID to see their shift report: "))
         if validate_emp_id(selected_emp_id) == True:
             display_shift_report(selected_emp_id)
         else:
+            print("No user with that id.\n")
+            show_admin_menu()
+
+    # Admin menu Option 3 - change employee profile
+    elif option == '3':
+        selected_emp_id = int(input("\nPlease enter an employee's ID to update their profile: "))
+        if validate_emp_id(selected_emp_id) == True:
+            update_profile(selected_emp_id)
+        else:
             print("No user with that id.")
             show_admin_menu()
 
-    # Go back to main menu
-    elif int(option) == 3:
+    # Admin menu Option 4 - Go back to main menu
+    elif option == '4':
         show_main_menu()
+
     else:
-        print('Invalid entry.')
+        print('\n*** INVALID ENTRY ***\n')
         show_admin_menu()
 
 def admin_adjust_time(emp):
@@ -379,34 +387,66 @@ def admin_adjust_time(emp):
     date_input = input('\nEnter date (MM/DD/YY): ')
     time_input = input('\nEnter time (HH:MM:SS): ')
 
-    if int(option) == 1:
+    if option == '1':
         start_shift(emp, date_input, time_input)
-    elif int(option) == 2:
+    elif option == '2':
         end_shift(emp, date_input, time_input)
-    elif int(option) == 3:
+    elif option == '3':
         start_break(emp, date_input, time_input)
-    elif int(option) == 4:
+    elif option == '4':
         end_break(emp, date_input, time_input)
-    elif int(option) == 5:
+    elif option == '5':
         start_lunch(emp, date_input, time_input)
-    elif int(option) == 6:
+    elif option == '6':
         end_lunch(emp, date_input, time_input)
     else:
-        print('Invalid entry.')
+        print('\n*** INVALID ENTRY ***\n')
 
     show_admin_menu()
 
 def register():
     """ Enter id, first name, and last name to register as new user """
 
-    id_num = input('Please enter Employee ID numer: ')
-    first = input('First name: ')
-    last = input('Last name: ')
+    id_input = input('Please enter Employee ID number: ')
+    try:
+        id_num = int(id_input)
+        first = input('First name: ')
+        last = input('Last name: ')
 
-    new_user = Employee(int(id_num), first, last).__dict__
-    employees.append(new_user)
+        new_user = Employee(id_num, first, last).__dict__
+        employees.append(new_user)
+        update_data_file()
+        return new_user
+    except:
+        print('\n*** EMPLOYEE ID MUST BE A NUMBER ***\n')
+        register()
+
+def update_profile(emp_id):
+    employee = [emp for emp in employees if emp['id'] == emp_id][0]
+    print('\nCHANGE PROFILE FOR', employee['first_name'], employee['last_name'])
+
+    answer = input('\nUpdate first name (y/n)? ')
+    if answer == 'Y' or answer == 'y':
+        employee['first_name'] = input('\nEnter new first name: ')
+        print('\nFIRST NAME UPDATED')
+
+    answer = input('\nUpdate last name (y/n)? ')
+    if answer == 'Y' or answer == 'y':
+        employee['last_name'] = input('\nEnter new last name: ')
+        print('\nLAST NAME UPDATED')
+
+    answer = input('\nUpdate admin status (y/n)? ')
+    if answer == 'Y' or answer == 'y':
+        status = input('\nGive this employee admin status (y/n)? ')
+        if status == 'Y' or status == 'y':
+            employee['is_admin'] = True
+        else:
+            employee['is_admin'] = False
+        print('\nADMIN STATUS UPDATED\n')
+
     update_data_file()
-    return new_user
+    print('Employee: ', employee['first_name'], employee['last_name'], '\nAdmin status:', employee['is_admin'],'\n')
+    show_admin_menu()
 
 def display_shift_report(emp_id):
     employee = [emp for emp in employees if emp['id'] == emp_id][0]
