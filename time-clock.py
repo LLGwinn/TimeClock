@@ -131,6 +131,7 @@ def show_start_menu():
 
     elif option == '0':
         print('\nExiting the Time Clock program. Goodbye!\n')
+        quit()
     else:
         print('\n*** INVALID ENTRY ***\n')
         show_start_menu()
@@ -202,7 +203,6 @@ def start_shift(emp, date, time):
     all_emp_shifts = [shift for shift in shifts if shift['emp_id'] == emp['id'] and shift['date'] == date]
     if len(all_emp_shifts) > 0:
         print('\nThere is already a shift for this employee on this date.\n')
-        return
     else:
         new_shift = Shift(emp['id'], date, time).__dict__
         shifts.append(new_shift)
@@ -270,8 +270,10 @@ def process_main_menu_input(user_input):
     time = datetime.datetime.now()
     # Main menu Option 1 - Start Shift (current employee)
     if user_input == '1':
-        if current_employee['shift_active'] == True:
-            print('\n*** INVALID ENTRY ***\n')
+        # Make sure there isn't already a shift for this day (active or complete)
+        all_emp_shifts = [shift for shift in shifts if shift['emp_id'] == current_employee['id'] and shift['date'] == time.strftime("%x")]
+        if len(all_emp_shifts) > 0 or current_employee['shift_active'] == True:
+            print('\nThere is already a shift for this employee on this date.\n')
             show_main_menu()
         else:
             start_shift(current_employee, time.strftime("%x"), time.strftime("%X"))
